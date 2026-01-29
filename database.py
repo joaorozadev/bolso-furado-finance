@@ -22,26 +22,62 @@ def criar_conexao():
     
 def criar_tabela(conexao):
     cursor = conexao.cursor()
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS categorias (
+        id SERIAL PRIMARY KEY,
+        nome VARCHAR(50) NOT NULL,
+        tipo VARCHAR(10) CHECK (tipo IN ('Receita', 'Despesa')),
+        UNIQUE(nome, tipo)
+    );
+    """)
+
+    cursor.execute("SELECT COUNT(*) FROM categorias")
+    if cursor.fetchone()[0] == 0:
+        print("Criando categorias padrão...")
+        
+        
+        dados = [
+                ('Salário', 'Receita'),
+                ('Freelance / Extra', 'Receita'),
+                ('Retorno de Investimento', 'Receita'),
+                ('Presente / Doação', 'Receita'),
+                ('Educação', 'Receita'),
+                ('Outras Receitas', 'Receita'),
+                ('Alimentação', 'Despesa'),
+                ('Transporte', 'Despesa'),
+                ('Moradia (Aluguel/Condomínio)', 'Despesa'),
+                ('Contas (Luz/Água/Internet)', 'Despesa'),
+                ('Assinaturas', 'Despesa'),
+                ('Lazer', 'Despesa'),
+                ('Educação', 'Despesa'),
+                ('Saúde', 'Despesa'),
+                ('Outras Despesas', 'Despesa')
+            ]
+        sql_insert = "INSERT INTO categorias (nome, tipo) VALUES (%s, %s)"
+        cursor.executemany(sql_insert, dados)
+        print('Categorias inseridas com sucesso!')
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS transacoes (
         id SERIAL PRIMARY KEY,
         data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        tipo VARCHAR(20) NOT NULL,
-        categoria VARCHAR(50),
         descricao TEXT,
-        valor NUMERIC(10, 2) NOT NULL
-        )
+        valor NUMERIC(10, 2) NOT NULL,
+        categoria_id INTEGER REFERENCES categorias(id) NOT NULL           
+    );               
     """)
+
     conexao.commit()
 
-def adicionar_transacao(conexao,tipo,categoria,descricao,valor):
+def adicionar_transacao(conexao, categoria_id, descricao, valor):
     cursor = conexao.cursor()
     sql = """
-    INSERT INTO transacoes (tipo, categoria, descricao, valor)
-    VALUES (%s, %s, %s, %s)
+    INSERT INTO transacoes (categoria_id, descricao, valor)
+    VALUES (%s, %s, %s)
     """
     try:
-        cursor.execute(sql, (tipo, categoria, descricao, valor))
+        cursor.execute(sql, (categoria_id, descricao, valor))
         conexao.commit()
         print('Transação salva com sucesso')
     except Exception as e:
@@ -51,11 +87,19 @@ def adicionar_transacao(conexao,tipo,categoria,descricao,valor):
 def obter_saldo(conn):
         cursor = conn.cursor()
 
-        cursor.execute("SELECT SUM(valor) FROM transacoes WHERE LOWER(tipo) = 'receita'")
+        cursor.execute("""
+            SELECT SUM(t.valor) FROM transacoes t
+            JOIN categorias c ON t.categoria_id = c.id
+            WHERE c.tipo = 'Receita'
+        """)
         resultado_receitas = cursor.fetchone()[0]
         total_receitas =float(resultado_receitas) if resultado_receitas else 0.0
 
-        cursor.execute("SELECT SUM(valor) FROM transacoes WHERE LOWER(tipo) = 'despesa'")
+        cursor.execute("""
+            SELECT SUM(t.valor) FROM transacoes t
+            JOIN categorias c ON t.categoria_id = c.id
+            WHERE c.tipo = 'Despesa'
+        """)
         resultado_despesas = cursor.fetchone()[0]
         total_despesas =float(resultado_despesas) if resultado_despesas else 0.0
 
@@ -65,32 +109,36 @@ def obter_saldo(conn):
 
 def listar_transacoes(conn):
     cursor = conn.cursor()
-    cursor.execute("SELECT id, data_criacao, tipo, categoria, descricao, valor FROM transacoes ORDER BY id ASC")
+    cursor.execute("""
+    SELECT t.id, t.data_criacao, c.tipo, c.nome, t.descricao, t.valor
+    FROM transacoes t
+    JOIN categorias c ON t.categoria_id = c.id
+    ORDER BY t.data_criacao DESC
+    """)
     return cursor.fetchall()
 
 def remover_transacao(conn, id_transacao):
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT id FROM transacoes WHERE id = %s", (id_transacao,))
-        if not cursor.fetchone():
+        cursor.execute("DELETE FROM transacoes WHERE id = %s", (id_transacao,))
+        if cursor.rowcount == 0:
             print('ID não encontrado')
-            return
-        cursor.execute("DELETE FROM transacoes WHERE id = %s",(id_transacao,))
-        conn.commit()
-        print('Transação removida com sucesso')
+        else:
+            conn.commit()
+            print('Transação removida com sucesso')
     except Exception as e:
         print(f'Erro ao remover: {e}')
         conn.rollback()
 
-def atualizar_transacao(conn, id_transacao, novo_valor, nova_desc, nova_cat):
+def atualizar_transacao(conn, id_transacao, novo_valor, nova_desc, nova_cat_id):
     cursor = conn.cursor()
     try:
         query = """
         UPDATE transacoes
-        SET valor = %s, descricao = %s, categoria = %s
+        SET valor = %s, descricao = %s, categoria_id = %s
         WHERE id = %s
         """
-        cursor.execute(query, (novo_valor, nova_desc, nova_cat, id_transacao))
+        cursor.execute(query, (novo_valor, nova_desc, nova_cat_id, id_transacao))
         conn.commit()
         print('Transação atualizada com sucesso')
     except Exception as e:
@@ -101,7 +149,11 @@ def exportar_relatorio(conexao):
     try:
         print('\n Gerando relatorio')
 
-        query = "SELECT * FROM transacoes"
+        query = """
+        SELECT t.id, t.data_criacao, c.tipo, c.nome AS categoria, t.descricao, t.valor
+        FROM transacoes t
+        JOIN categorias c ON t.categoria_id = c.id
+        """
         df = pd.read_sql_query(query,conexao)
 
         if df.empty:
@@ -112,11 +164,12 @@ def exportar_relatorio(conexao):
         print('Como deseja salvar?')
         print('1. Arquivo CSV')
         print('2. Arquivo Excel (.xlsx)')
+        print('Digite qualquer outra coisa para voltar\n')
 
         opcao = input('Digite a opção: ')
 
         if opcao not in ['1', '2']:
-            print('Opção inválida. Operação cancelada')
+            print('Operação cancelada')
             return
         
         nome_base = input('Nome do arquivo (sem extensão): ').strip()
@@ -138,7 +191,13 @@ def exportar_relatorio(conexao):
 
 def obter_tipo_transacao(conn, id_transacao):
     cursor = conn.cursor()
-    cursor.execute("SELECT tipo FROM transacoes WHERE id = %s", (id_transacao,))
+    sql ="""
+    SELECT c.tipo
+    FROM transacoes t
+    JOIN categorias c ON t.categoria_id = c.id
+    WHERE t.id =%s
+    """
+    cursor.execute(sql,(id_transacao,))
     resultado = cursor.fetchone()
 
     if resultado:
@@ -146,9 +205,21 @@ def obter_tipo_transacao(conn, id_transacao):
     else:
         return None
     
+def listar_categoria_por_tipo(conn, tipo_filtro):
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, nome FROM categorias WHERE tipo = %s ORDER BY nome", (tipo_filtro,))
+    return cursor.fetchall()
+    
 def obter_dados_graficos(conn): #reutilizar futuramente para gasto por cat, ex'gastou X em alimentos'
     cursor = conn.cursor()
-    cursor.execute("SELECT categoria, SUM(valor) FROM transacoes WHERE tipo = 'despesa' GROUP BY categoria")
+    sql = """
+    SELECT c.nome, SUM(t.valor) 
+    FROM transacoes t 
+    JOIN categorias c ON t.categoria_id = c.id
+    WHERE c.tipo = 'Despesa' 
+    GROUP BY c.nome
+    """
+    cursor.execute(sql)
     return cursor.fetchall() 
 
 def gerar_grafico_despesas(conexao):
@@ -164,7 +235,7 @@ def gerar_grafico_despesas(conexao):
 
     for linha in dados: 
         categorias.append(linha[0])
-        valores.append(linha[1])
+        valores.append(float(linha[1]))
 
     plt.figure(figsize=(8, 6))
     plt.pie(valores,labels = categorias, autopct='%1.1f%%', startangle=140)
@@ -176,12 +247,11 @@ def gerar_grafico_despesas(conexao):
 def busca_por_periodo(conexao, data_inicio, data_fim):
     cursor = conexao.cursor()
     sql = """
-    SELECT id, data_criacao, tipo, categoria, descricao, valor
-    FROM transacoes
-    WHERE data_criacao::date BETWEEN %s AND %s
-    ORDER BY data_criacao ASC
+    SELECT t.id, t.data_criacao, c.tipo, c.nome, t.descricao, t.valor
+    FROM transacoes t
+    JOIN categorias c ON t.categoria_id = c.id
+    WHERE t.data_criacao::date BETWEEN %s AND %s
+    ORDER BY t.data_criacao ASC
 """
     cursor.execute(sql, (data_inicio, data_fim))
     return cursor.fetchall()
-
-

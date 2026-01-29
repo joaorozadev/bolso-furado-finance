@@ -1,5 +1,5 @@
 import database
-import datetime
+from datetime import datetime as dt_class
 
 def entrada_numerica(mensagem):
     while True:
@@ -13,21 +13,22 @@ def entrada_numerica(mensagem):
 def menu():
 
     conexao = database.criar_conexao()
-    database.criar_tabela(conexao)
 
     if conexao is None:
         print('O programa não pode continuar sem conexão com o banco')
         print('Verifique se o PostgreSQL está ligado e se o arquivo .env está correto')
         return
+    
+    database.criar_tabela(conexao)
 
     while True:
-        print('\n--- Bolso furado v1 ---')
+        print('\n--- Bolso furado v1.1 (Normalizado) ---')
         print('1. Adicionar Receita')
         print('2. Adicionar Despesa')
         print('3. Ver Saldo Atual')
         print('4. Gerar Gráfico de Despesas')
-        print('5. Extrato completo(ver IDs/ editar / excluir)')
-        print('6. Gerar relatorio (arquivo CSV/Excel)')
+        print('5. Extrato completo(Editar / Excluir)')
+        print('6. Gerar relatorio (CSV/Excel)')
         print('7. Busca por período')
         print('8. Sair')
 
@@ -35,19 +36,18 @@ def menu():
 
         if opcao =='1' or opcao =='2':
             try:
-            
                 tipo = 'Receita' if opcao == '1' else 'Despesa'
-
                 print(f'\nNOVO REGISTRO : {tipo.upper()}')
 
                 valor = entrada_numerica('Valor: R$ ')
                 descricao = input('Descricao: ')
-                categoria = selecionar_categoria(tipo)
+                id_categoria = selecionar_categoria(conexao, tipo)
 
-                print(f'Categoria selecionada: {categoria}')
+                if id_categoria:
+                    database.adicionar_transacao(conexao, id_categoria, descricao, valor)
+                else:
+                    print('Operação cancelada, nenhuma categoria selecionada')
 
-                tipo = 'Receita' if opcao == '1' else 'despesa'
-                database.adicionar_transacao(conexao, tipo, categoria, descricao, valor)
             except ValueError:
                 print('Digite um valor númerico válido.')
         
@@ -89,8 +89,10 @@ def menu():
                         novo_valor = entrada_numerica('Novo valor: ')
                         nova_desc = input('Nova descrição: ')
                             
-                        nova_cat = selecionar_categoria(tipo_real)
-                        database.atualizar_transacao(conexao, id_alvo, novo_valor, nova_desc, nova_cat)
+                        nova_cat_id = selecionar_categoria(conexao, tipo_real)
+
+                        if nova_cat_id:
+                            database.atualizar_transacao(conexao, id_alvo, novo_valor, nova_desc, nova_cat_id)
                     except ValueError:
                         print('Dados inválidos')
 
@@ -103,8 +105,8 @@ def menu():
             data_fim_str = input('Data final (dd/mm/aaaa): ')
 
             try:
-                dt_ini = datetime.strptime(data_ini_str, "%d/%m/%Y").date()
-                dt_fim = datetime.strptime(data_fim_str, "%d/%m/%Y").date()
+                dt_ini = dt_class.strptime(data_ini_str, "%d/%m/%Y").date()
+                dt_fim = dt_class.strptime(data_fim_str, "%d/%m/%Y").date()
 
                 if dt_ini > dt_fim:
                     print('A data inicial é maior que a final, invertendo a ordem...')
@@ -128,39 +130,26 @@ def menu():
         else:
             print('Opção inválida')
 
-def selecionar_categoria(tipo_transacao):
+def selecionar_categoria(conexao, tipo_transacao):
     
-    if tipo_transacao == 'Receita': 
-        categorias = {
-        1: "Salário",
-        2: "Freelance / Extra",
-        3: "Retorno de investimento",
-        4: "presente / doação",
-        5: "Outras receitas",
-        6: "Educação",
-        }
-    else:
-        categorias = {
-        1:'Alimentação',
-        2:'Transporte',
-        3:'Moradia (Aluguel/Condomínio)',
-        4:'Contas (Luz/Água/Internet)',
-        5:'Assinaturas', 
-        6:'Lazer',
-        7:'Educação',
-        8:'Saúde',
-        9:'Outras despesas'
-
-        }
-
+    opcoes = database.listar_categoria_por_tipo(conexao, tipo_transacao)
+    if not opcoes:
+        print(f'Nenhuma categoria de {tipo_transacao} encontrada')
+        return None
+    
     print('\n Selecione a categoria ')
-    for numero, nome in categorias.items():
-        print(f'{numero}. {nome}')
+
+    for i, (id_real, nome) in enumerate(opcoes, start=1):
+        print(f'{i}. {nome}')
+
     while True:
         try:
             escolha = int(input('Digite o número da categoria: '))
-            if escolha in categorias:
-                return categorias[escolha]
+            if 1 <= escolha <= len(opcoes):
+                categoria_selecionada = opcoes[escolha - 1]
+                id_real_banco = categoria_selecionada[0]
+                print(f'Selecionado:{categoria_selecionada[1]}')
+                return id_real_banco
             else:
                 print('Número inválido, tente novamente')
         except ValueError:
@@ -176,13 +165,20 @@ def exibir_tabela_transacoes(transacoes):
     larg_desc = max([len(t[4]) for t in transacoes] + [9]) + 2
     
     cabecalho = f'{'ID':<5} | {'DATA':<12} | {'TIPO':<10} | {'CATEGORIA':<{larg_cat}} | {'DESCRIÇÃO':<{larg_desc}} | {'VALOR':<10}'
-    print('-' * len(cabecalho))
+    divisoria = '-' *len(cabecalho)
+    print(divisoria)
     print(cabecalho)
-    print('-' * len(cabecalho))
+    print(divisoria)
 
     for t in transacoes:
-        data_fmt = t[1].strftime('%d/%m/%Y') if hasattr(t[1], 'strftime') else str(t[1])[:10]
-        print(f'{t[0]:<5} | {data_fmt:<12} | {t[2]:<10} | {t[3]:<{larg_cat}} | {t[4]:<{larg_desc}} | R${t[5]:<7.2f}')
+        data_show = t[1]
+        if hasattr(data_show, 'strftime'):
+            data_str = data_show.strftime('%d/%m/%Y')
+        else:
+            data_str = str(data_show)[:10]
+
+        print(f'{t[0]:<5} | {data_str:<12} | {t[2]:<10} | {t[3]:<{larg_cat}} | {t[4]:<{larg_desc}} | R${t[5]:<7.2f}')
+    print(divisoria)
 
 if __name__ == '__main__':
     menu()

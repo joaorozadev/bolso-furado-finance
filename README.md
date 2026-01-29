@@ -1,11 +1,10 @@
-```markdown
 # 💰 PyFinance-Tracker
 
 > Um gerenciador de finanças pessoais via linha de comando (CLI), desenvolvido para aplicar conceitos de manipulação de dados e bancos de dados relacionais.
 
-![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
-![PostgreSQL](https://img.shields.io/badge/postgresql-4169e1?style=for-the-badge&logo=postgresql&logoColor=white)
-![Pandas](https://img.shields.io/badge/pandas-%23150458.svg?style=for-the-badge&logo=pandas&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![Pandas](https://img.shields.io/badge/Pandas-2C2D72?style=for-the-badge&logo=pandas&logoColor=white)
 
 ## 🎯 Objetivo do Projeto
 Este projeto foi desenvolvido com o intuito de consolidar e testar meus conhecimentos em:
@@ -31,6 +30,11 @@ Antes de começar, você precisa ter instalado em sua máquina:
 - [Python 3.10+](https://www.python.org/downloads/)
 - [PostgreSQL](https://www.postgresql.org/download/)
 - Git
+
+### 1️⃣ Clonar o repositório
+```bash
+git clone [https://github.com/joaorozadev/bolso-furado-finance.git](https://github.com/joaorozadev/bolso-furado-finance.git)
+cd bolso-furado-finance
 ```
 
 ### 1️⃣ Clonar o repositório
