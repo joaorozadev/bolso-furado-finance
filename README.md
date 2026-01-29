@@ -85,6 +85,8 @@ python main.py
 
 Pretendo evoluir nos estudos e atualizar este projeto para uma aplicação completa. Os próximos passos são:
 
-* [ ] **Front-end Web:** Criar uma interface visual amigável para sair do terminal.
-* [ ] **Meta de Gastos:** Implementar alertas quando o usuário ultrapassar um teto de gastos.
-* [ ] **Autenticação e Normalização:** Criar sistema de login para múltiplos usuários e realizar a normalização dos dados (tabelas relacionais).
+* [✅] **Normalização de Banco de Dados:** Estrutura migrada para modelo relacional (Tabelas SQL conectadas via Foreign Keys) para garantir integridade dos dados e escalabilidade.
+* [ ] **Relatórios Inteligentes (Excel):** Criação de um sistema de templates (`.xlsx`) para gerar dashboards visuais automáticos com gráficos e indicadores financeiros, abandonando a exportação crua.
+* [ ] **Front-end Web:** Desenvolvimento de interface visual (Flask/Django ou React) para substituir a interação via terminal.
+* [ ] **Meta de Gastos:** Sistema de orçamentação com alertas automáticos quando o usuário atingir limites definidos por categoria.
+* [ ] **Autenticação e Multi-usuário:** Implementação de login seguro e hash de senhas para suportar múltiplos usuários isolados.
