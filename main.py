@@ -164,7 +164,7 @@ def exibir_tabela_transacoes(transacoes):
     larg_cat = max([len(t[3]) for t in transacoes] + [9]) + 2
     larg_desc = max([len(t[4]) for t in transacoes] + [9]) + 2
     
-    cabecalho = f'{'ID':<5} | {'DATA':<12} | {'TIPO':<10} | {'CATEGORIA':<{larg_cat}} | {'DESCRIÇÃO':<{larg_desc}} | {'VALOR':<10}'
+    cabecalho = f"{'ID':<5} | {'DATA':<12} | {'TIPO':<10} | {'CATEGORIA':<{larg_cat}} | {'DESCRIÇÃO':<{larg_desc}} | {'VALOR':<10}"
     divisoria = '-' *len(cabecalho)
     print(divisoria)
     print(cabecalho)
