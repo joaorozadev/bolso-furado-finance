@@ -117,6 +117,18 @@ def listar_transacoes(conn):
     """)
     return cursor.fetchall()
 
+def buscar_transacao_por_id(conn, id_transacao):
+    
+    cursor = conn.cursor()
+    sql = """
+    SELECT t.id, t.data_criacao, c.tipo, c.nome, t.descricao, t.valor, t.categoria_id
+    FROM transacoes t
+    JOIN categorias c ON t.categoria_id = c.id
+    WHERE t.id = %s
+    """
+    cursor.execute(sql, (id_transacao,))
+    return cursor.fetchone()
+
 def remover_transacao(conn, id_transacao):
     cursor = conn.cursor()
     try:
@@ -147,7 +159,7 @@ def atualizar_transacao(conn, id_transacao, novo_valor, nova_desc, nova_cat_id):
 
 def exportar_relatorio(conexao):
     try:
-        print('\n Gerando relatorio')
+        print('\n Gerando relatorio\n')
 
         query = """
         SELECT t.id, t.data_criacao, c.tipo, c.nome AS categoria, t.descricao, t.valor
@@ -160,10 +172,10 @@ def exportar_relatorio(conexao):
             print('Não há dados no banco de dados para exportar')
             return
         
-        print(f'Dados carregados: {len(df)} registros encontrados')
-        print('Como deseja salvar?')
+        print(f'\nDados carregados: {len(df)} registros encontrados')
+        print('Como deseja salvar?\n')
         print('1. Arquivo CSV')
-        print('2. Arquivo Excel (.xlsx)')
+        print('2. Arquivo Excel (.xlsx)\n')
         print('Digite qualquer outra coisa para voltar\n')
 
         opcao = input('Digite a opção: ')
