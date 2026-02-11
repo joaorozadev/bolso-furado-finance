@@ -131,7 +131,7 @@ def dados_grafico():
     try:
         conexao = database.criar_conexao()
         dados = database.obter_dados_graficos(conexao)
-        conexao.close
+        conexao.close()
 
         labels = [linha[0] for linha in dados]
         valores = [float(linha[1]) for linha in dados]
@@ -161,13 +161,13 @@ def baixar_relatorio():
         output = io.BytesIO()
 
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False, sheet_name='Extratp')
+            df.to_excel(writer, index=False, sheet_name='Extrato')
 
         output.seek(0)
 
         return send_file(
             output,
-            nimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             as_attachment=True,
             download_name='relatorio_bolso_furado.xlsx'
         )

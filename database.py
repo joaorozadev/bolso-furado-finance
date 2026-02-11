@@ -181,7 +181,7 @@ def exportar_relatorio(conexao):
         opcao = input('Digite a opção: ')
 
         if opcao not in ['1', '2']:
-            print('Operação cancelada')
+            print('Operação cancelada, voltando')
             return
         
         nome_base = input('Nome do arquivo (sem extensão): ').strip()
