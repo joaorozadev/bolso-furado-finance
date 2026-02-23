@@ -37,7 +37,7 @@ Antes de começar, você precisa ter instalado em sua máquina:
 ### 1️⃣ Clonar o repositório
 
 ```bash
-git clone [https://github.com/joaorozadev/bolso-furado-finance.git](https://github.com/joaorozadev/bolso-furado-finance.git)
+git clone https://github.com/joaorozadev/bolso-furado-finance.git
 cd bolso-furado-finance
 ```
 
