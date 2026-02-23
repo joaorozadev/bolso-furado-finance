@@ -1,5 +1,10 @@
-import database
+import sys
+import os
 from datetime import datetime as dt_class
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from app import database
 
 def entrada_numerica(mensagem):
     while True:
@@ -22,7 +27,7 @@ def menu():
     database.criar_tabela(conexao)
 
     while True:
-        print('\n--- Bolso furado v1.1 (Normalizado) ---')
+        print('\n--- Bolso furado v1.2 (Legado CLI) ---')
         print('1. Adicionar Receita')
         print('2. Adicionar Despesa')
         print('3. Ver Saldo Atual')
