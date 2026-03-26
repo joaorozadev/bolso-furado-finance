@@ -7,6 +7,7 @@ transferencias_bp = Blueprint('transferencias', __name__)
 @transferencias_bp.route('/api/transferencias', methods=['POST'])
 @jwt_required()
 def transferir():
+    conexao = None
     try:
         usuario_atual_id = get_jwt_identity()
         dados = request.get_json()
@@ -21,7 +22,7 @@ def transferir():
         
         if conta_origem_id == conta_destino_id:
             return jsonify({"erro": "A conta de origem e destino não podem ser a mesma."}), 400
-        
+
         try:
             valor_float = float(valor)
             if valor_float <= 0:
@@ -30,6 +31,12 @@ def transferir():
             return jsonify({"erro": "Valor inválido."}), 400
 
         conexao = database.criar_conexao()
+       
+        if not database.verificar_dono_da_conta(conexao, conta_origem_id, usuario_atual_id):
+            return jsonify({"erro": "Conta de origem inválida ou não pertence a você."}), 403
+            
+        if not database.verificar_dono_da_conta(conexao, conta_destino_id, usuario_atual_id):
+            return jsonify({"erro": "Conta de destino inválida ou não pertence a você."}), 403
 
         database.realizar_transferencia(
             conexao, 
@@ -39,10 +46,13 @@ def transferir():
             valor_float, 
             descricao
         )
-        
-        database.liberar_conexao(conexao)
 
         return jsonify({"mensagem": "Transferência realizada com sucesso!"}), 201
 
     except Exception as e:
-        return jsonify({"erro": str(e)}), 500
+        print(f"Erro Crítico em Transferências: {e}")
+        return jsonify({"erro": "Erro interno no servidor."}), 500
+
+    finally:
+        if conexao:
+            database.liberar_conexao(conexao)

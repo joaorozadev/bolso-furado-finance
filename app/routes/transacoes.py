@@ -21,6 +21,7 @@ def converter_transacao_para_json(t):
 @transacoes_bp.route('/api/transacoes', methods=['GET'])
 @jwt_required()
 def listar_transacoes():
+    conexao = None
     try:
         usuario_atual_id = get_jwt_identity()
 
@@ -33,16 +34,20 @@ def listar_transacoes():
         else:
             dados_brutos = database.listar_transacoes(conexao, usuario_atual_id)
 
-        database.liberar_conexao(conexao)
-
         list_json = [converter_transacao_para_json(t) for t in dados_brutos]
         return jsonify(list_json), 200
     except Exception as e:
-        return jsonify({"erro": str(e)}), 500
+        print(f"Erro em [Nome da Rota]: {e}")
+        return jsonify({"erro": "Ocorreu um erro interno. Tente novamente mais tarde."}), 500
     
+    finally:
+        if conexao:
+            database.liberar_conexao(conexao)
+
 @transacoes_bp.route('/api/transacoes', methods=['POST'])
 @jwt_required()
 def criar_transacao():
+    conexao = None
     try:
         usuario_atual_id = get_jwt_identity() 
 
@@ -64,21 +69,25 @@ def criar_transacao():
         descricao, 
         valor
         )
-        database.liberar_conexao(conexao)
 
         return jsonify({"mensagem": "Sucesso!"}), 201
     except Exception as e:
-        return jsonify({"erro": str(e)}), 500
-    
+        print(f"Erro em [Nome da Rota]: {e}")
+        return jsonify({"erro": "Ocorreu um erro interno. Tente novamente mais tarde."}), 500
+
+    finally:
+        if conexao:
+            database.liberar_conexao(conexao)
+
 @transacoes_bp.route('/api/saldo', methods=['GET'])
 @jwt_required() 
 def ver_saldo():
+    conexao = None
     try:
         usuario_atual_id = get_jwt_identity()
 
         conexao = database.criar_conexao()
         saldo, receitas, despesas = database.obter_saldo(conexao, usuario_atual_id)
-        database.liberar_conexao(conexao)
 
         return jsonify({
             "saldo": saldo,
@@ -86,25 +95,36 @@ def ver_saldo():
             "total_despesas": despesas
         })
     except Exception as e:
-        return jsonify({"erro": str(e)}), 500
+        print(f"Erro em [Nome da Rota]: {e}")
+        return jsonify({"erro": "Ocorreu um erro interno. Tente novamente mais tarde."}), 500
+
+    finally:
+        if conexao:
+            database.liberar_conexao(conexao)
 
 @transacoes_bp.route('/api/transacoes/<int:id>', methods=['DELETE'])
 @jwt_required()
 def deletar_transacoes(id):
+    conexao = None
     try:
         usuario_atual_id = get_jwt_identity()
 
         conexao = database.criar_conexao()
         database.remover_transacao(conexao, id, usuario_atual_id)
-        database.liberar_conexao(conexao)
 
         return jsonify({"mensagem": "Transação removida com sucesso!"}), 200
     except Exception as e:
-        return jsonify({"erro": str(e)}), 500
-    
+        print(f"Erro em [Nome da Rota]: {e}")
+        return jsonify({"erro": "Ocorreu um erro interno. Tente novamente mais tarde."}), 500
+
+    finally:
+        if conexao:
+            database.liberar_conexao(conexao)
+
 @transacoes_bp.route('/api/transacoes/<int:id>', methods=['PUT', 'PATCH'])
 @jwt_required()
 def editar_transacao(id):
+    conexao = None
     try:
         usuario_atual_id = get_jwt_identity() 
 
@@ -113,7 +133,6 @@ def editar_transacao(id):
         tupla_antiga = database.buscar_transacao_por_id(conexao, id, usuario_atual_id)
 
         if not tupla_antiga:
-            database.liberar_conexao(conexao)
             return jsonify({"erro": "Transação não encontrada ou acesso negado"}), 404
         
         desc_antiga = tupla_antiga[4]
@@ -135,7 +154,6 @@ def editar_transacao(id):
         usuario_atual_id
         )
 
-        database.liberar_conexao(conexao)
         return jsonify({
             "mensagem": "Atualizado com sucesso!",
             "dados_finais": {
@@ -146,4 +164,9 @@ def editar_transacao(id):
         }), 200
     
     except Exception as e:
-        return jsonify({"erro": str(e)}), 500
+        print(f"Erro em [Nome da Rota]: {e}")
+        return jsonify({"erro": "Ocorreu um erro interno. Tente novamente mais tarde."}), 500
+    
+    finally:
+        if conexao:
+            database.liberar_conexao(conexao)

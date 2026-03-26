@@ -9,12 +9,12 @@ relatorios_bp = Blueprint('relatorios', __name__)
 @relatorios_bp.route('/api/grafico/despesas', methods=['GET'])
 @jwt_required()
 def dados_grafico():
+    conexao = None
     try:
         usuario_atual_id = get_jwt_identity() 
         conexao = database.criar_conexao()
         
         dados = database.obter_dados_graficos(conexao, usuario_atual_id) 
-        database.liberar_conexao(conexao)
 
         labels = [linha[0] for linha in dados]
         valores = [float(linha[1]) for linha in dados]
@@ -25,11 +25,17 @@ def dados_grafico():
         })
 
     except Exception as e:
-        return jsonify({"erro": str(e)}), 500
+        print(f"Erro em [Nome da Rota]: {e}")
+        return jsonify({"erro": "Ocorreu um erro interno. Tente novamente mais tarde."}), 500
+    
+    finally:
+        if conexao:
+            database.liberar_conexao(conexao)    
 
 @relatorios_bp.route('/api/exportar', methods=['GET'])
 @jwt_required()
 def baixar_relatorio():
+    conexao = None
     try:
         usuario_atual_id = get_jwt_identity() 
         conexao = database.criar_conexao()
@@ -43,7 +49,6 @@ def baixar_relatorio():
         """
         
         df = pd.read_sql_query(sql, conexao, params={'u_id': usuario_atual_id})
-        database.liberar_conexao(conexao)
 
         output = io.BytesIO()
 
@@ -58,5 +63,10 @@ def baixar_relatorio():
             as_attachment=True,
             download_name='relatorio_bolso_furado.xlsx'
         )
-    except Exception as e:        
-        return jsonify({"erro": str(e)}), 500
+    except Exception as e:
+        print(f"Erro em [Nome da Rota]: {e}")
+        return jsonify({"erro": "Ocorreu um erro interno. Tente novamente mais tarde."}), 500
+    
+    finally:
+        if conexao:
+            database.liberar_conexao(conexao)    

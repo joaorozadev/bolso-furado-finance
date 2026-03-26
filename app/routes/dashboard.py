@@ -7,6 +7,7 @@ dashboard_bp = Blueprint('dashboard', __name__)
 @dashboard_bp.route('/api/dashboard', methods=['GET'])
 @jwt_required()
 def obter_dashboard():
+    conexao = None
     try:
         usuario_atual_id = get_jwt_identity()
         
@@ -21,8 +22,6 @@ def obter_dashboard():
         
         grafico_despesas = database.obter_gastos_por_categoria_mes(conexao, usuario_atual_id, mes_ano)
         
-        database.liberar_conexao(conexao)
-
         dados_dashboard = {
             "mes_referencia": mes_ano,
             "resumo": resumo,
@@ -32,6 +31,9 @@ def obter_dashboard():
         return jsonify(dados_dashboard), 200
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"erro": str(e)}), 500
+        print(f"Erro em [Nome da Rota]: {e}")
+        return jsonify({"erro": "Ocorreu um erro interno. Tente novamente mais tarde."}), 500
+    
+    finally:
+        if conexao:
+            database.liberar_conexao(conexao)

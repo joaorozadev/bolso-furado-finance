@@ -212,6 +212,10 @@ def listar_contas(conn, usuario_id):
     cursor.execute(sql,(usuario_id,))
     return cursor.fetchall()
 
+def verificar_dono_da_conta(conn, conta_id, usuario_id):
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM contas WHERE id = %s AND usuario_id = %s", conta_id, usuario_id)
+    return cursor.fetchone() is not None
 
 # CATEGORIAS
 

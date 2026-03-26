@@ -8,6 +8,7 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/api/auth/registro', methods=['POST'])
 @limiter.limit("5 per minute")
 def registrar():
+    conexao = None
     dados = request.get_json()
     nome = dados.get('nome')
     email = dados.get('email')
@@ -19,31 +20,41 @@ def registrar():
     senha_hash = bcrypt.generate_password_hash(senha_pura).decode('utf-8')
 
     try:
-        conn = database.criar_conexao()
-        database.cadastrar_usuario(conn, nome, email, senha_hash)
-        database.liberar_conexao(conn)
+        conexao = database.criar_conexao()
+        database.cadastrar_usuario(conexao, nome, email, senha_hash)
         return jsonify({"mensagem": "Usuário criado com sucesso"}), 201
     except Exception as e:
         return jsonify({"erro": "Email já cadastrado ou erro no banco"}), 500
-    
+    finally:
+        if conexao:
+            database.liberar_conexao(conexao)
+
 @auth_bp.route('/api/auth/login', methods=['POST'])
 @limiter.limit("10 per minute")
 def login():
-    dados = request.get_json()
-    email = dados.get('email')
-    senha_pura = dados.get('senha')
+    conexao = None
+    try:
+        dados = request.get_json()
+        email = dados.get('email')
+        senha_pura = dados.get('senha')
 
-    conn = database.criar_conexao()
-    usuario = database.buscar_usuario_por_email(conn, email)
-    database.liberar_conexao(conn)
+        conexao = database.criar_conexao()
+        usuario = database.buscar_usuario_por_email(conexao, email)
 
-    if usuario:
-        id_user, nome_user, hash_banco = usuario
-        if bcrypt.check_password_hash(hash_banco, senha_pura):
-            token = create_access_token(identity=str(id_user))
-            return jsonify({
-                "mensagem": "Login realizado!",
-                "token": token,
-                "usuario": nome_user
-            }), 200
-    return jsonify({"erro": "Email ou senha incorreta"}), 401
+        if usuario:
+            id_user, nome_user, hash_banco = usuario
+            if bcrypt.check_password_hash(hash_banco, senha_pura):
+                token = create_access_token(identity=str(id_user))
+                return jsonify({
+                    "mensagem": "Login realizado!",
+                    "token": token,
+                    "usuario": nome_user
+                }), 200
+        return jsonify({"erro": "Email ou senha incorreta"}), 401
+    except Exception as e:
+        print(f"Erro em [Nome da Rota]: {e}")
+        return jsonify({"erro": "Ocorreu um erro interno. Tente novamente mais tarde."}), 500
+
+    finally:
+        if conexao:
+            database.liberar_conexao(conexao)

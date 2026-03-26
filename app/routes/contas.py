@@ -7,6 +7,7 @@ contas_bp = Blueprint('contas', __name__)
 @contas_bp.route('/api/contas', methods=['POST'])
 @jwt_required()
 def criar_conta():
+    conexao = None
     try:
         usuario_atual_id = get_jwt_identity()
         dados = request.get_json()
@@ -24,22 +25,25 @@ def criar_conta():
 
         conexao = database.criar_conexao()
         nova_conta_id = database.adicionar_conta(conexao, usuario_atual_id, nome, tipo, saldo_inicial)
-        database.liberar_conexao(conexao)
 
         return jsonify({"mensagem": "Conta criada com sucesso!", "id": nova_conta_id}), 201
     
     except Exception as e:
-        return jsonify({"erro": str(e)}), 500
+        print(f"Erro em [Nome da Rota]: {e}")
+        return jsonify({"erro": "Ocorreu um erro interno. Tente novamente mais tarde."}), 500
+    finally:
+        if conexao:
+            database.liberar_conexao(conexao)
     
 @contas_bp.route('/api/contas', methods=['GET'])
 @jwt_required()
 def listar_minhas_contas():
+    conexao = None
     try:
         usuario_atual_id = get_jwt_identity()
 
         conexao = database.criar_conexao()
         dados_brutos = database.listar_contas(conexao, usuario_atual_id)
-        database.liberar_conexao(conexao)
 
         contas_json = [
             {
@@ -53,4 +57,8 @@ def listar_minhas_contas():
         return jsonify(contas_json), 200
     
     except Exception as e:
-        return jsonify({"erro": str(e)}), 500
+        print(f"Erro em [Nome da Rota]: {e}")
+        return jsonify({"erro": "Ocorreu um erro interno. Tente novamente mais tarde."}), 500
+    finally:
+        if conexao:
+            database.liberar_conexao(conexao)

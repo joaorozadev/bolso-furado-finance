@@ -7,22 +7,28 @@ usuarios_bp = Blueprint('usuarios', __name__)
 @usuarios_bp.route('/api/usuarios/perfil', methods=['GET'])
 @jwt_required()
 def ver_perfil():
+    conexao = None
     try:
         usuario_atual_id = get_jwt_identity()
         conexao = database.criar_conexao()
         perfil = database.obter_perfil(conexao, usuario_atual_id)
-        database.liberar_conexao(conexao)
 
         if perfil:
             return jsonify({"id": perfil[0], "nome": perfil[1], "email": perfil[2]}), 200
         
         return jsonify({"erro": "Usuário não encontrado"}), 404
     except Exception as e:
-        return jsonify({"erro": str(e)}), 500
-    
+        print(f"Erro em [Nome da Rota]: {e}")
+        return jsonify({"erro": "Ocorreu um erro interno. Tente novamente mais tarde."}), 500
+
+    finally:
+        if conexao:
+            database.liberar_conexao(conexao)
+
 @usuarios_bp.route('/api/usuarios/perfil', methods=['PUT'])
 @jwt_required()
 def editar_perfil():
+    conexao = None
     try:
         usuario_atual_id = get_jwt_identity()
         dados = request.get_json()
@@ -35,23 +41,31 @@ def editar_perfil():
 
         conexao = database.criar_conexao()
         database.atualizar_perfil(conexao, usuario_atual_id, nome, email)
-        database.liberar_conexao(conexao)
 
         return jsonify({"mensagem": "Perfil atualizado com sucesso!"}), 200
     except Exception as e:
-        return jsonify({"erro": "Erro ao atualizar perfil. Talvez o e-mail já esteja em uso.", "detalhes": str(e)}), 500
-    
+        print(f"Erro em [Nome da Rota]: {e}")
+        return jsonify({"erro": "Ocorreu um erro interno. Tente novamente mais tarde."}), 500
+
+    finally:
+        if conexao:
+            database.liberar_conexao(conexao)
+
 @usuarios_bp.route('/api/usuarios/excluir', methods=['DELETE'])
 @jwt_required()
 def excluir_conta():
+    conexao = None
     try:
         usuario_atual_id = get_jwt_identity()
         conexao = database.criar_conexao()
         
         database.excluir_usuario_completo(conexao, usuario_atual_id)
-        
-        database.liberar_conexao(conexao)
 
         return jsonify({"mensagem": "Conta e todos os dados foram apagados permanentemente."}), 200
     except Exception as e:
-        return jsonify({"erro": "Erro ao excluir conta", "detalhes": str(e)}), 500
+        print(f"Erro em [Nome da Rota]: {e}")
+        return jsonify({"erro": "Ocorreu um erro interno. Tente novamente mais tarde."}), 500
+    
+    finally:
+        if conexao:
+            database.liberar_conexao(conexao)

@@ -7,6 +7,7 @@ metas_bp = Blueprint('metas', __name__)
 @metas_bp.route('/api/metas', methods=['POST'])
 @jwt_required()
 def criar_meta():
+    conexao = None
     try:
         usuario_atual_id = get_jwt_identity()
         dados = request.get_json()
@@ -20,16 +21,21 @@ def criar_meta():
         
         conexao = database.criar_conexao()
         nova_meta_id = database.adicionar_meta(conexao, usuario_atual_id, categoria_id, valor_limite, mes_ano)
-        database.liberar_conexao(conexao)
 
         return jsonify({"mensagem": "Meta criada com sucesso!", "id": nova_meta_id}), 201
     
     except Exception as e:
-        return jsonify({"erro": "Erro ao criar meta. Verifique se já existe uma meta para esta categoria neste mês.", "detalhe": str(e)}), 500
+        print(f"Erro em [Nome da Rota]: {e}")
+        return jsonify({"erro": "Ocorreu um erro interno. Tente novamente mais tarde."}), 500
     
+    finally:
+        if conexao:
+            database.liberar_conexao(conexao)
+
 @metas_bp.route('/api/metas', methods=['GET'])
 @jwt_required()
 def listar_minhas_metas():
+    conexao = None
     try:
         usuario_atual_id = get_jwt_identity()
         mes_ano = request.args.get('mes_ano') 
@@ -39,7 +45,6 @@ def listar_minhas_metas():
 
         conexao = database.criar_conexao()
         dados_brutos = database.listar_metas(conexao, usuario_atual_id, mes_ano)
-        database.liberar_conexao(conexao)
 
         metas_json = [
             {
@@ -54,4 +59,9 @@ def listar_minhas_metas():
         return jsonify(metas_json), 200
 
     except Exception as e:
-        return jsonify({"erro": str(e)}), 500
+        print(f"Erro em [Nome da Rota]: {e}")
+        return jsonify({"erro": "Ocorreu um erro interno. Tente novamente mais tarde."}), 500
+    
+    finally:
+        if conexao:
+            database.liberar_conexao(conexao)

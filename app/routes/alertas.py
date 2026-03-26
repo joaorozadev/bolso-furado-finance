@@ -7,17 +7,16 @@ alertas_bp = Blueprint('alertas', __name__)
 @alertas_bp.route('/api/alertas', methods=['GET'])
 @jwt_required()
 def verificar_alertas():
+    conexao = None
     try:
         usuario_atual_id = get_jwt_identity()
-        mes_ano = request.args.get('mes_ano') # Ex: 2026-02
+        mes_ano = request.args.get('mes_ano')
 
         if not mes_ano:
             return jsonify({"erro": "O parâmetro mes_ano é obrigatório."}), 400
 
         conexao = database.criar_conexao()
         dados_brutos = database.obter_alertas_metas(conexao, usuario_atual_id, mes_ano)
-        database.liberar_conexao(conexao)
-
         resultado_alertas = []
 
         for item in dados_brutos:
@@ -55,6 +54,8 @@ def verificar_alertas():
         return jsonify(resultado_alertas), 200
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"erro": str(e)}), 500
+        print(f"Erro em [Nome da Rota]: {e}")
+        return jsonify({"erro": "Ocorreu um erro interno. Tente novamente mais tarde."}), 500
+    finally:
+        if conexao:
+            database.liberar_conexao(conexao)
